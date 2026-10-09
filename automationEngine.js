@@ -1,5 +1,8 @@
-const { chromium } = require('playwright-extra');
-const stealthPlugin = require('puppeteer-extra-plugin-stealth');
+import { chromium } from 'playwright-extra';
+import stealthPlugin from 'puppeteer-extra-plugin-stealth';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 chromium.use(stealthPlugin());
 
@@ -10,7 +13,9 @@ chromium.use(stealthPlugin());
  * @param {string} structuredReportText - Structured report produced by AI
  * @returns {Promise<{success: boolean, message?: string, error?: string}>}
  */
-async function executePepmisSubmission(checkNumber, password, structuredReportText) {
+export async function executePepmisSubmission(checkNumber, password, structuredReportText) {
+    const targetUrl = process.env.PEPMIS_URL || 'https://ess.utumishi.go.tz/';
+
     // Launch browser with stealth parameters
     const browser = await chromium.launch({
         headless: process.env.HEADLESS !== 'false',
@@ -30,13 +35,16 @@ async function executePepmisSubmission(checkNumber, password, structuredReportTe
     const page = await context.newPage();
 
     try {
-        console.log(`[Automation] Navigating to Watumishi Portal for check number: ${checkNumber}`);
-        await page.goto(process.env.PEPMIS_URL || 'https://ess.utumishi.go.tz/', { waitUntil: 'networkidle' });
+        console.log(`[Automation] Navigating to official Watumishi Portal (${targetUrl}) for check number: ${checkNumber}`);
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
-        // Input credentials based on the portal UI structure
-        const usernameInput = page.locator('input[placeholder*="Username"], input[name="username"], #username').first();
+        // Wait briefly for page inputs to load
+        await page.waitForTimeout(2000);
+
+        // Input credentials based on the Watumishi Portal (ESS) UI structure
+        const usernameInput = page.locator('input[placeholder*="Username"], input[placeholder*="Check"], input[name="username"], input[name="check_number"], #username, input[type="text"]').first();
         const passwordInput = page.locator('input[type="password"]').first();
-        const loginBtn = page.locator('button:has-text("LOGIN"), button[type="submit"], #loginBtn').first();
+        const loginBtn = page.locator('button:has-text("LOGIN"), button:has-text("Login"), button:has-text("INGIA"), button[type="submit"], #loginBtn').first();
 
         if (await usernameInput.isVisible({ timeout: 5000 }).catch(() => false)) {
             await usernameInput.fill(checkNumber);
@@ -47,24 +55,23 @@ async function executePepmisSubmission(checkNumber, password, structuredReportTe
             await loginBtn.click();
 
             // Wait for dashboard redirection
-            await page.waitForLoadState('networkidle');
-            console.log('[Automation] Successfully authenticated. Navigating to PEPMIS module...');
+            await page.waitForLoadState('domcontentloaded').catch(() => {});
+            console.log('[Automation] Credentials submitted. Navigating to PEPMIS module...');
         } else {
             console.log('[Automation] Direct login input not found, checking active session...');
         }
 
         // Dashboard navigation and form filler
-        // Example selector interactions:
-        const pepmisMenu = page.locator('#pepmis-menu-link, a[href*="pepmis"]').first();
-        if (await pepmisMenu.isVisible({ timeout: 3000 }).catch(() => false)) {
+        const pepmisMenu = page.locator('#pepmis-menu-link, a[href*="pepmis"], a:has-text("PEPMIS"), a:has-text("Performance")').first();
+        if (await pepmisMenu.isVisible({ timeout: 4000 }).catch(() => false)) {
             await pepmisMenu.click();
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('domcontentloaded').catch(() => {});
         }
 
-        const taskTextarea = page.locator('#task-textarea, textarea[name="description"], textarea').first();
-        if (await taskTextarea.isVisible({ timeout: 3000 }).catch(() => false)) {
+        const taskTextarea = page.locator('#task-textarea, textarea[name="description"], textarea[name="activity"], textarea').first();
+        if (await taskTextarea.isVisible({ timeout: 4000 }).catch(() => false)) {
             await taskTextarea.fill(structuredReportText);
-            const submitBtn = page.locator('#submit-report-btn, button[type="submit"]').first();
+            const submitBtn = page.locator('#submit-report-btn, button[type="submit"], button:has-text("Submit"), button:has-text("WASILISHA")').first();
             if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
                 await submitBtn.click();
             }
@@ -77,9 +84,6 @@ async function executePepmisSubmission(checkNumber, password, structuredReportTe
         console.error('[Automation Error]:', error.message);
         return { success: false, error: error.message };
     } finally {
-        // Clear browser context instantly to free server resources
         await browser.close();
     }
 }
-
-module.exports = { executePepmisSubmission };

@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment and sensitive credentials
+.env
+.env.local
+.env.production
+
+# Session authentication files & caches
+.wwebjs_auth/
+.wwebjs_cache/
+auth_info_baileys/
+pb_data/
+
+# Logs and screenshots
+*.log
+pepmis_submission_*.png
+
+# IDE and System files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

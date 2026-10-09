@@ -3,17 +3,20 @@
   "version": "1.0.0",
   "description": "Automated PEPMIS performance reporting agent for Tanzanian public servants",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",
-    "@whiskeysockets/baileys": "^7.0.0-rc14",
     "dotenv": "^16.4.5",
     "openai": "^4.28.0",
     "pino": "^8.19.0",
     "playwright": "^1.42.1",
     "playwright-extra": "^4.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2"
+    "pocketbase": "^0.28.1",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
   }
 }
